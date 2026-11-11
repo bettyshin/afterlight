@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>afterlight ✧･ﾟ:</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@font-face {
+  font-family: "SimHei";
+  src: url("./SimHei Font.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: #0e0b07;
+  overflow: hidden;
+  font-family: "SimHei", sans-serif;
+  cursor: none;
+}
+
+/* ── DANDELION CURSOR ───────────────────────────────────────────────────────── */
+#dandelion-cursor {
+  position: fixed;
+  pointer-events: none;
+  z-index: 99999;
+  will-change: transform;
+  transition: opacity 0.3s;
+}
+#dandelion-cursor svg {
+  width: 34px;
+  height: 46px;
+}
+
+.dand-body {
+  animation: dand-sway 2.6s ease-in-out infinite alternate;
+  transform-origin: 27px 55px;
+}
+@keyframes dand-sway {
+  0%   { transform: rotate(-3deg) scaleY(1.015); }
+  40%  { transform: rotate(2.5deg) scaleY(0.988); }
+  70%  { transform: rotate(-1.5deg) scaleY(1.008); }
+  100% { transform: rotate(3deg) scaleY(0.982); }
+}
+
+/* ── LIGHT CANVAS ───────────────────────────────────────────────────────────── */
+#light-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: screen;
+}
+
+.stage {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+@keyframes frame-in {
+  from { opacity: 0.3; transform: scale(0.98); }
+  to   { opacity: 1;   transform: scale(1); }
+}
+
+/* ── FRAME ──────────────────────────────────────────────────────────────────── */
+.frame {
+  width: 977px;
+  padding: 32px 32px 0 32px;
+  background: rgba(22, 18, 10, 0.72);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 220, 120, 0.12);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,220,120,0.10),
+    inset 0 -1px 0 rgba(100,80,30,0.2),
+    0 8px 80px rgba(0,0,0,0.7),
+    0 2px 8px rgba(0,0,0,0.5);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  animation: frame-in 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.frame::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; width: 80%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,220,120,0.25), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── BACK BTN ───────────────────────────────────────────────────────────────── */
+#back-btn {
+  display: none;
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 200;
+  align-items: center;
+  gap: 5px;
+  font-family: "SimHei", sans-serif;
+  font-size: 12px;
+  color: rgba(220, 190, 100, 0.75);
+  background: rgba(30, 22, 8, 0.82);
+  border: 1px solid rgba(200, 160, 60, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.15s, transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+}
+#back-btn:hover  { background: rgba(50, 35, 10, 0.92); }
+#back-btn:active { transform: scale(0.93); }
+#back-btn svg    { width: 13px; height: 13px; opacity: 0.7; flex-shrink: 0; }
+#back-btn.visible { display: flex; }
+
+/* ── CANVAS ─────────────────────────────────────────────────────────────────── */
+canvas#c {
+  width: 100%;
+  height: 614px;
+  display: block;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+/* ── LANDING ────────────────────────────────────────────────────────────────── */
+#landing {
+  position: absolute;
+  inset: 32px 32px 0 32px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  z-index: 5;
+  overflow: hidden;
+  transition: background 0.15s;
+}
+#landing.hidden    { display: none; }
+#landing.drag-over { background: rgba(255, 200, 80, 0.06); }
+
+.dz-title {
+  font-size: 24px;
+  color: rgba(240, 210, 130, 0.9);
+  text-align: center;
+  line-height: 1;
+}
+.dz-subtitle {
+  font-size: 16px;
+  color: rgba(220, 190, 100, 0.8);
+  text-align: center;
+  margin-top: 8px;
+}
+.dz-landing-img {
+  margin-top: 32px;
+  width: 1116px;
+  height: auto;
+  flex-shrink: 0;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.7;
+}
+.dz-drop-label {
+  font-size: 15px;
+  color: rgba(220, 190, 100, 0.8);
+  text-align: center;
+  margin-top: 32px;
+  line-height: 1;
+}
+.dz-formats {
+  font-size: 15px;
+  color: rgba(220, 190, 100, 0.8);
+  text-align: center;
+  margin-top: 6px;
+}
+
+.dz-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dz-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  font-family: "SimHei", sans-serif;
+  font-size: 13px;
+  color: rgba(220, 190, 100, 0.8);
+  background: rgba(30, 22, 8, 0.65);
+  border: 1px solid rgba(200, 160, 60, 0.3);
+  border-radius: 8px;
+  cursor: none;
+  transition: background 0.15s, transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+.dz-btn:hover  { background: rgba(50, 35, 10, 0.9); border-color: rgba(220,180,80,0.45); }
+.dz-btn:active { transform: scale(0.93); }
+.dz-btn svg    { width: 13px; height: 13px; opacity: 0.65; flex-shrink: 0; }
+
+#file-input { display: none; }
+
+/* ── CAMERA UI ──────────────────────────────────────────────────────────────── */
+#cam-ui {
+  display: none;
+  position: absolute;
+  inset: 32px 32px 0 32px;
+  border-radius: 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  z-index: 5;
+  pointer-events: none;
+}
+#cam-ui.visible { display: flex; }
+
+#live-indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: none;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+}
+.frame.cam-mode #cam-ui #live-indicator { display: flex; }
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(220, 80, 60, 0.9);
+  animation: blink 1.6s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+#live-indicator span {
+  font-size: 11px;
+  color: rgba(200, 170, 90, 0.55);
+  letter-spacing: 0.08em;
+}
+
+/* ── SHUTTER TRAY ───────────────────────────────────────────────────────────── */
+#shutter-tray {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  width: 100%;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.frame.cam-mode #shutter-tray { display: flex; }
+.frame.cam-captured #shutter-tray { display: none; }
+
+#shutter-btn {
+  pointer-events: all;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: rgba(30, 22, 8, 0.88);
+  border: 2px solid rgba(200, 160, 60, 0.45);
+  box-shadow: 0 0 0 4px rgba(180,130,40,0.12), 0 2px 12px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: none;
+  transition: transform 0.1s cubic-bezier(0.34,1.56,0.64,1), background 0.12s;
+}
+#shutter-btn:hover  { background: rgba(50, 35, 10, 0.98); }
+#shutter-btn:active { transform: scale(0.88); }
+.shutter-inner {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: rgba(180, 140, 50, 0.25);
+  border: 1.5px solid rgba(200, 160, 60, 0.3);
+}
+#shutter-label {
+  font-size: 12px;
+  color: rgba(180, 150, 70, 0.45);
+  margin-top: 8px;
+  pointer-events: none;
+}
+
+.frame.cam-mode canvas#c { margin-bottom: 0; }
+
+/* ── RETAKE BTN ─────────────────────────────────────────────────────────────── */
+#retake-btn {
+  display: none;
+  pointer-events: all;
+  align-items: center;
+  gap: 4px;
+  font-family: "SimHei", sans-serif;
+  font-size: 12px;
+  color: rgba(220, 190, 100, 0.7);
+  background: rgba(30, 22, 8, 0.65);
+  border: 1px solid rgba(200, 160, 60, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: none;
+  transition: background 0.15s, transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+#retake-btn:hover  { background: rgba(50, 35, 10, 0.9); }
+#retake-btn:active { transform: scale(0.93); }
+#retake-btn svg    { width: 13px; height: 13px; opacity: 0.65; flex-shrink: 0; }
+#retake-btn.visible { display: flex; }
+
+/* ── BOTTOM PANEL ───────────────────────────────────────────────────────────── */
+#bottom-panel {
+  flex-shrink: 0;
+  width: 100%;
+  background: rgba(18, 13, 5, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(200, 160, 60, 0.12);
+  z-index: 20;
+  overflow: hidden;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1);
+  max-height: 0;
+}
+#bottom-panel.visible { max-height: 160px; }
+#bottom-panel.no-transition { transition: none; }
+
+.bar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#fname-input {
+  font-family: "SimHei", sans-serif;
+  font-size: 12px;
+  color: rgba(220, 190, 100, 0.85);
+  background: rgba(20, 15, 5, 0.4);
+  border: 1px solid rgba(180, 140, 50, 0.25);
+  border-radius: 8px;
+  padding: 8px;
+  outline: none;
+  width: 190px;
+  transition: border-color 0.15s, background 0.15s;
+}
+#fname-input:focus {
+  border-color: rgba(200, 160, 60, 0.5);
+  background: rgba(30, 22, 8, 0.55);
+}
+#fname-input::placeholder { color: rgba(160, 130, 55, 0.35); }
+
+#note-toggle {
+  font-family: "SimHei", sans-serif;
+  font-size: 12px;
+  color: rgba(220, 190, 100, 0.85);
+  background: rgba(20, 15, 5, 0.4);
+  border: 1px solid rgba(180, 140, 50, 0.25);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s, transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+#note-toggle:hover  { background: rgba(40, 28, 8, 0.6); }
+#note-toggle:active { transform: scale(0.93); }
+#note-toggle svg    { width: 12px; height: 12px; opacity: 0.6; flex-shrink: 0; }
+
+.note-area {
+  padding: 0 0 12px;
+  opacity: 0;
+  transform: translateY(8px);
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.25s ease, transform 0.4s ease, max-height 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.note-area.open {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 100px;
+}
+
+#note-input {
+  width: 100%;
+  height: 62px;
+  resize: none;
+  font-family: "SimHei", sans-serif;
+  font-size: 12px;
+  color: rgba(220, 190, 100, 0.85);
+  background: rgba(20, 15, 5, 0.4);
+  border: 1px solid rgba(180, 140, 50, 0.25);
+  border-radius: 10px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  line-height: 1.5;
+}
+#note-input:focus {
+  border-color: rgba(200, 160, 60, 0.5);
+  background: rgba(30, 22, 8, 0.55);
+}
+#note-input::placeholder { color: #675426; }
+
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ctrl-btn {
+  font-family: "SimHei", sans-serif;
+  font-size: 12px;
+  color: rgba(220, 190, 100, 0.85);
+  background: rgba(20, 15, 5, 0.5);
+  border: 1px solid rgba(180, 140, 50, 0.25);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: none;
+  transition: background 0.15s, transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+.ctrl-btn:hover  { background: rgba(40, 28, 8, 0.75); }
+.ctrl-btn:active { transform: scale(0.93); }
+
+#play-btn {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(20, 15, 5, 0.55);
+  border: 1px solid rgba(180, 140, 50, 0.3);
+  display: flex; align-items: center; justify-content: center;
+  cursor: none;
+  transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+}
+#play-btn:active { transform: scale(0.93); }
+#play-btn svg { width: 13px; height: 13px; opacity: 0.6; color: rgba(220,190,100,1); }
+
+#download-btn {
+  font-family: "SimHei", sans-serif;
+  font-size: 12px;
+  color: rgba(20, 13, 3, 0.95);
+  background: rgba(200, 160, 55, 0.82);
+  border: 1px solid rgba(220, 180, 70, 0.5);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s, transform 0.12s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+#download-btn:hover  { background: rgba(220, 180, 70, 0.95); }
+#download-btn:active { transform: scale(0.93); }
+#download-btn svg    { width: 12px; height: 12px; opacity: 0.8; flex-shrink: 0; }
+#download-btn.flash  { background: rgba(120, 180, 80, 0.85); border-color: rgba(80,150,50,0.55); }
+
+/* ── POLAROID ────────────────────────────────────────────────────────────────── */
+.polaroid-fly {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 3px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+  background: #1a1408;
+  padding: 5px 5px 18px 5px;
+  transform-origin: center center;
+  animation: polaroid-eject 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes polaroid-eject {
+  0%   { opacity:1; transform:translate(0,0) rotate(0deg) scale(1); }
+  60%  { opacity:1; }
+  100% { opacity:0; transform:translate(var(--px),var(--py)) rotate(var(--pr)) scale(0.7); }
+}
+
+.credit-link {
+  color: rgba(220, 190, 100, 0.85);
+  text-decoration: underline;
+  pointer-events: all;
+}
+.credit-link:hover { color: rgba(200,170,80,0.7); }
+</style>
+</head>
+<body>
+
+<div id="dandelion-cursor">
+  <svg viewBox="0 0 54 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g class="dand-body">
+      <!-- stem -->
+      <path d="M27 55 C26.5 49 26 42 26.5 36 C27 30 27.5 24 27 19" stroke="#7a6630" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M27 55 C27 49 26.8 42 27.2 36 C27.6 30 28 24 27.5 19" stroke="#a8892e" stroke-width="0.5" stroke-linecap="round" opacity="0.45"/>
+      <!-- receptacle -->
+      <ellipse cx="27" cy="18" rx="3.5" ry="2.2" fill="#8a7028" opacity="0.9"/>
+      <ellipse cx="27" cy="17" rx="2.5" ry="1.3" fill="#b89840" opacity="0.5"/>
+      <!-- spokes + pappus, center (27,18) -->
+      <!-- 0deg up -->
+      <line x1="27" y1="18" x2="27" y2="3" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="27" cy="3.5" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.9">
+        <path d="M27 2 C25.5 -0.5 25 -3 24.8 -5.5"/>
+        <path d="M27 2 C26.5 -0.5 26.2 -3 26 -5.5"/>
+        <path d="M27 2 C27 -0.5 27 -3 27 -6"/>
+        <path d="M27 2 C27.5 -0.5 27.8 -3 28 -5.5"/>
+        <path d="M27 2 C28.5 -0.5 29 -3 29.2 -5.5"/>
+      </g>
+      <!-- 20deg -->
+      <line x1="27" y1="18" x2="32" y2="3.8" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="32" cy="4.2" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.9">
+        <path d="M32 3 C30.5 0.5 30 -2 29.5 -4.5"/>
+        <path d="M32 3 C32 0.5 32 -2 32 -4.5"/>
+        <path d="M32 3 C33 0.5 33.5 -2 33.8 -4.5"/>
+        <path d="M32 3 C34 0.8 34.8 -1.5 35.2 -4"/>
+        <path d="M32 3 C34.5 1.5 35.5 -0.5 36.2 -3"/>
+      </g>
+      <!-- 40deg -->
+      <line x1="27" y1="18" x2="37.5" y2="6.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="37.8" cy="7" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.9">
+        <path d="M38 5.8 C36.5 3.5 36 1 35.5 -1.5"/>
+        <path d="M38 5.8 C38.5 3.5 38.8 1 39 -1.5"/>
+        <path d="M38 5.8 C39.5 3.8 40 1.5 40.5 -1"/>
+        <path d="M38 5.8 C40.5 4.5 41.5 2.5 42.5 0.5"/>
+        <path d="M38 5.8 C40.8 5 42 3.2 43 1.5"/>
+      </g>
+      <!-- 60deg -->
+      <line x1="27" y1="18" x2="40.5" y2="12" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="41" cy="12.5" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M41.5 11.5 C41 9 41 6.5 40.8 4"/>
+        <path d="M41.5 11.5 C42.5 9.2 43 6.8 43.5 4.5"/>
+        <path d="M41.5 11.5 C43.5 9.8 44.5 7.8 45.5 5.8"/>
+        <path d="M41.5 11.5 C44 10.5 45.5 9 46.8 7.2"/>
+        <path d="M41.5 11.5 C44.5 11 46.2 9.8 47.5 8.5"/>
+      </g>
+      <!-- 80deg -->
+      <line x1="27" y1="18" x2="42" y2="19.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="42.5" cy="20" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M43 19 C44 16.5 45 14.2 45.8 12"/>
+        <path d="M43 19 C45 17.5 46.5 15.5 47.8 13.5"/>
+        <path d="M43 19 C45.5 18.5 47 17 48.5 15.5"/>
+        <path d="M43 19 C45.5 20 47.2 20.5 49 21"/>
+        <path d="M43 19 C45 21 46.5 22.5 47.8 24"/>
+      </g>
+      <!-- 100deg -->
+      <line x1="27" y1="18" x2="40.5" y2="25" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="41" cy="25.5" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M41.5 25 C43.5 23.5 45 22 46.5 20"/>
+        <path d="M41.5 25 C44 24.5 45.8 24 47.5 23.5"/>
+        <path d="M41.5 25 C44 26.5 45.5 27.5 47 28.5"/>
+        <path d="M41.5 25 C43.5 27.5 44.8 29.5 46 31.5"/>
+        <path d="M41.5 25 C43 28 44 30.5 44.8 33"/>
+      </g>
+      <!-- 120deg -->
+      <line x1="27" y1="18" x2="37.5" y2="29.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="38" cy="30" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M38.5 30 C41 29.5 43 29 44.8 28.5"/>
+        <path d="M38.5 30 C41 31.5 43 32.5 44.8 33.5"/>
+        <path d="M38.5 30 C40 33 41 35.5 41.8 38"/>
+        <path d="M38.5 30 C39 33.5 39 36.5 38.8 39.5"/>
+        <path d="M38.5 30 C38 33.5 37.5 36.5 37 39.5"/>
+      </g>
+      <!-- 140deg -->
+      <line x1="27" y1="18" x2="32" y2="32.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="32.5" cy="33" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M33 33.5 C35.5 33 37.5 33 39.5 33"/>
+        <path d="M33 33.5 C35 35 36.5 36.5 38 38"/>
+        <path d="M33 33.5 C34 36.5 34.5 39 34.8 42"/>
+        <path d="M33 33.5 C33 37 32.8 40 32.5 43"/>
+        <path d="M33 33.5 C31.5 37 30.5 40 29.8 43"/>
+      </g>
+      <!-- 160deg -->
+      <line x1="27" y1="18" x2="27" y2="34" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.7"/>
+      <!-- -20deg -->
+      <line x1="27" y1="18" x2="22" y2="3.8" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="22" cy="4.2" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.9">
+        <path d="M22 3 C20 0.5 19.5 -2 19 -4.5"/>
+        <path d="M22 3 C21 0.5 21 -2 21 -4.5"/>
+        <path d="M22 3 C22 0.5 22 -2 22 -5"/>
+        <path d="M22 3 C23 0.5 23.5 -2 23.8 -4.5"/>
+        <path d="M22 3 C24 0.8 24.8 -1.5 25.2 -4"/>
+      </g>
+      <!-- -40deg -->
+      <line x1="27" y1="18" x2="16.5" y2="6.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="16.2" cy="7" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.9">
+        <path d="M16 5.8 C14.5 3.5 14 1 13.5 -1.5"/>
+        <path d="M16 5.8 C15.5 3.5 15.2 1 15 -1.5"/>
+        <path d="M16 5.8 C16 3.8 16 1.5 16 -1"/>
+        <path d="M16 5.8 C17.5 3.5 18 1 18.5 -1.5"/>
+        <path d="M16 5.8 C18 4.5 19 2.5 20 0.5"/>
+      </g>
+      <!-- -60deg -->
+      <line x1="27" y1="18" x2="13.5" y2="12" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="13" cy="12.5" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M12.5 11.5 C12 9 12 6.5 12.2 4"/>
+        <path d="M12.5 11.5 C11.5 9.2 11 6.8 10.5 4.5"/>
+        <path d="M12.5 11.5 C10.5 9.8 9.5 7.8 8.5 5.8"/>
+        <path d="M12.5 11.5 C10 10.5 8.5 9 7.2 7.2"/>
+        <path d="M12.5 11.5 C9.5 11 7.8 9.8 6.5 8.5"/>
+      </g>
+      <!-- -80deg -->
+      <line x1="27" y1="18" x2="11.5" y2="19.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="11" cy="20" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M11 19 C10 16.5 9 14.2 8.2 12"/>
+        <path d="M11 19 C9 17.5 7.5 15.5 6.2 13.5"/>
+        <path d="M11 19 C8.5 18.5 7 17 5.5 15.5"/>
+        <path d="M11 19 C8.5 20 6.8 20.5 5 21"/>
+        <path d="M11 19 C9 21 7.5 22.5 6.2 24"/>
+      </g>
+      <!-- -100deg -->
+      <line x1="27" y1="18" x2="13.5" y2="25" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="13" cy="25.5" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M12.5 25 C10.5 23.5 9 22 7.5 20"/>
+        <path d="M12.5 25 C10 24.5 8.2 24 6.5 23.5"/>
+        <path d="M12.5 25 C10 26.5 8.5 27.5 7 28.5"/>
+        <path d="M12.5 25 C10.5 27.5 9.2 29.5 8 31.5"/>
+        <path d="M12.5 25 C11 28 10 30.5 9.2 33"/>
+      </g>
+      <!-- -120deg -->
+      <line x1="27" y1="18" x2="16.5" y2="29.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="16" cy="30" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M15.5 30 C13 29.5 11 29 9.2 28.5"/>
+        <path d="M15.5 30 C13 31.5 11 32.5 9.2 33.5"/>
+        <path d="M15.5 30 C14 33 13 35.5 12.2 38"/>
+        <path d="M15.5 30 C15 33.5 15 36.5 15.2 39.5"/>
+        <path d="M15.5 30 C16 33.5 16.5 36.5 17 39.5"/>
+      </g>
+      <!-- -140deg -->
+      <line x1="27" y1="18" x2="22" y2="32.5" stroke="#c8a840" stroke-width="0.65" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="21.5" cy="33" r="1.1" fill="#e8cc70"/>
+      <g stroke="#dfc060" stroke-width="0.45" stroke-linecap="round" opacity="0.88">
+        <path d="M21 33.5 C18.5 33 16.5 33 14.5 33"/>
+        <path d="M21 33.5 C19 35 17.5 36.5 16 38"/>
+        <path d="M21 33.5 C20 36.5 19.5 39 19.2 42"/>
+        <path d="M21 33.5 C21 37 21.2 40 21.5 43"/>
+        <path d="M21 33.5 C22.5 37 23.5 40 24.2 43"/>
+      </g>
+      <!-- gossamer halo rings -->
+      <circle cx="27" cy="18" r="19" stroke="#c8a030" stroke-width="0.35" stroke-dasharray="1 5.5" opacity="0.28"/>
+      <circle cx="27" cy="18" r="15" stroke="#c8a030" stroke-width="0.3"  stroke-dasharray="1 7"   opacity="0.18"/>
+      <!-- center hub -->
+      <circle cx="27" cy="18" r="4"   fill="#6a5018" opacity="0.9"/>
+      <circle cx="27" cy="18" r="2.8" fill="#8c6e22" opacity="0.85"/>
+      <circle cx="27" cy="18" r="1.7" fill="#b89040" opacity="0.9"/>
+      <circle cx="27" cy="17.4" r="0.8" fill="#e0c060" opacity="0.7"/>
+    </g>
+  </svg>
+</div>
+
+<!-- Full-page light canvas -->
+<canvas id="light-canvas"></canvas>
+
+<button id="back-btn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  BACK
+</button>
+
+<div class="stage">
+  <div class="frame" id="frame">
+
+    <canvas id="c"></canvas>
+
+    <div id="shutter-tray">
+      <button id="shutter-btn">
+        <div class="shutter-inner"></div>
+      </button>
+      <div id="shutter-label">capture moment</div>
+    </div>
+
+    <div id="landing">
+      <div class="dz-title">✧･ﾟ: AFTERLIGHT :･ﾟ✧</div>
+      <div class="dz-subtitle">Captured or remembered, with space for reflection</div>
+      <img class="dz-landing-img" src="./landing-img.png" alt="" draggable="false" />
+      <div class="dz-drop-label">Upload or capture a moment to render</div>
+      <div class="dz-formats">[JPG, PNG, GIF, MP4, MOV, WEBM]</div>
+      <div class="dz-btn-row">
+        <button class="dz-btn" id="browse-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+          Browse files
+        </button>
+        <button class="dz-btn" id="capture-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Capture live
+        </button>
+      </div>
+      <input type="file" id="file-input" accept="image/*,video/*" />
+    </div>
+
+    <div id="cam-ui">
+      <div id="live-indicator">
+        <div class="live-dot"></div>
+        <span>LIVE</span>
+      </div>
+    </div>
+
+    <div id="bottom-panel">
+      <div class="bar">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <input id="fname-input" type="text" placeholder="filename" spellcheck="false" />
+          <button id="note-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Add note
+          </button>
+        </div>
+        <div class="bar-right">
+          <div id="vid-controls" style="display:none;align-items:center;gap:8px;">
+            <div id="play-btn">
+              <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor" style="color:rgba(220,190,100,0.8)"><polygon points="5,3 19,12 5,21"/></svg>
+            </div>
+          </div>
+          <button class="ctrl-btn" id="change-btn">Change file</button>
+          <button id="retake-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Retake
+          </button>
+          <button id="download-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Save frame
+          </button>
+        </div>
+      </div>
+      <div class="note-area" id="note-area">
+        <textarea id="note-input" placeholder="Write something to remember this by — it'll appear in the downloaded image ⋆｡°✩"></textarea>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="position:fixed;bottom:20px;left:24px;font-family:'SimHei',sans-serif;font-size:15px;color:rgba(220, 190, 100, 0.85);pointer-events:none;z-index:100;">
+  Built by <a href="https://x.com/betty__shin" target="_blank" rel="noopener" class="credit-link">Betty Shin</a>
+</div>
+
+<script>
+// ── DANDELION CURSOR + SEED TRAIL ─────────────────────────────────────────────
+const dandelionCursor = document.getElementById("dandelion-cursor");
+const lightCanvas     = document.getElementById("light-canvas");
+const lctx            = lightCanvas.getContext("2d");
+
+let mouseX = window.innerWidth  / 2;
+let mouseY = window.innerHeight / 2;
+let smoothX = mouseX, smoothY = mouseY;
+
+const seeds = [];
+let lastSeedX = mouseX, lastSeedY = mouseY, seedTimer = 0;
+
+function spawnSeed(x, y) {
+  const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 1.1;
+  const speed = 0.25 + Math.random() * 0.5;
+  seeds.push({
+    x, y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed - 0.35,
+    life: 0,
+    maxLife: 100 + Math.random() * 70,
+    wobble: (Math.random() - 0.5) * 0.016,
+    size: 1.1 + Math.random() * 1.0,
+  });
+}
+
+function resizeLight() {
+  lightCanvas.width  = window.innerWidth;
+  lightCanvas.height = window.innerHeight;
+}
+resizeLight();
+window.addEventListener("resize", resizeLight);
+
+document.addEventListener("mousemove", e => { mouseX = e.clientX; mouseY = e.clientY; });
+document.addEventListener("mouseleave", () => { dandelionCursor.style.opacity = "0"; });
+document.addEventListener("mouseenter", () => { dandelionCursor.style.opacity = "1"; });
+
+function drawSeedWisp(ctx, x, y, size, alpha) {
+  ctx.beginPath();
+  ctx.arc(x, y, size * 0.85, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(224, 200, 130, ${alpha * 0.78})`;
+  ctx.fill();
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(x + i * size * 0.6, y - size * 0.4);
+    ctx.bezierCurveTo(
+      x + i * size * 1.1, y - size * 2.2,
+      x + i * size * 0.8, y - size * 4.2,
+      x + i * size * 1.3, y - size * 6.2
+    );
+    ctx.strokeStyle = `rgba(205, 180, 110, ${alpha * 0.48})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+}
+
+function drawLight() {
+  smoothX += (mouseX - smoothX) * 0.14;
+  smoothY += (mouseY - smoothY) * 0.14;
+
+  dandelionCursor.style.transform = `translate(${mouseX - 27}px, ${mouseY - 18}px)`;
+
+  const dx = smoothX - lastSeedX, dy = smoothY - lastSeedY;
+  seedTimer += Math.sqrt(dx * dx + dy * dy);
+  if (seedTimer > 14) {
+    spawnSeed(
+      smoothX + (Math.random() - 0.5) * 10,
+      smoothY + (Math.random() - 0.5) * 10
+    );
+    seedTimer = 0;
+  }
+  lastSeedX = smoothX; lastSeedY = smoothY;
+
+  lctx.clearRect(0, 0, lightCanvas.width, lightCanvas.height);
+
+  const cx = smoothX, cy = smoothY;
+
+  const g1 = lctx.createRadialGradient(cx, cy, 0, cx, cy, 160);
+  g1.addColorStop(0,   `rgba(225, 205, 150, 0.11)`);
+  g1.addColorStop(0.4, `rgba(200, 178, 110, 0.06)`);
+  g1.addColorStop(1,   `rgba(150, 130,  70, 0)`);
+  lctx.fillStyle = g1;
+  lctx.beginPath();
+  lctx.arc(cx, cy, 160, 0, Math.PI * 2);
+  lctx.fill();
+
+  const g2 = lctx.createRadialGradient(cx, cy, 0, cx, cy, 38);
+  g2.addColorStop(0,   `rgba(240, 220, 165, 0.22)`);
+  g2.addColorStop(0.5, `rgba(215, 192, 125, 0.10)`);
+  g2.addColorStop(1,   `rgba(180, 155,  80, 0)`);
+  lctx.fillStyle = g2;
+  lctx.beginPath();
+  lctx.arc(cx, cy, 38, 0, Math.PI * 2);
+  lctx.fill();
+
+  for (let i = seeds.length - 1; i >= 0; i--) {
+    const s = seeds[i];
+    s.life++;
+    s.vx += s.wobble;
+    s.vy -= 0.010;
+    s.x  += s.vx;
+    s.y  += s.vy;
+    const t = s.life / s.maxLife;
+    const alpha = t < 0.12
+      ? (t / 0.12) * 0.82
+      : (1 - ((t - 0.12) / 0.88)) * 0.82;
+    if (s.life >= s.maxLife) { seeds.splice(i, 1); continue; }
+    lctx.save();
+    drawSeedWisp(lctx, s.x, s.y, s.size, alpha);
+    lctx.restore();
+  }
+
+  requestAnimationFrame(drawLight);
+}
+requestAnimationFrame(drawLight);
+
+
+// ── REFS ──────────────────────────────────────────────────────────────────────
+const canvas      = document.getElementById("c");
+const ctx         = canvas.getContext("2d");
+const frame       = document.getElementById("frame");
+const landing     = document.getElementById("landing");
+const camUI       = document.getElementById("cam-ui");
+const shutterTray = document.getElementById("shutter-tray");
+const backBtn     = document.getElementById("back-btn");
+const browseBtn   = document.getElementById("browse-btn");
+const captureBtn  = document.getElementById("capture-btn");
+const fileInput   = document.getElementById("file-input");
+const shutterBtn  = document.getElementById("shutter-btn");
+const retakeBtn   = document.getElementById("retake-btn");
+const bottomPanel = document.getElementById("bottom-panel");
+const fnameInput  = document.getElementById("fname-input");
+const noteToggle  = document.getElementById("note-toggle");
+const noteArea    = document.getElementById("note-area");
+const noteInput   = document.getElementById("note-input");
+const vidControls = document.getElementById("vid-controls");
+const playBtn     = document.getElementById("play-btn");
+const playIcon    = document.getElementById("play-icon");
+const changeBtn   = document.getElementById("change-btn");
+const downloadBtn = document.getElementById("download-btn");
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let grainCanvas = null;
+let source = null, sourceType = null, sourceFile = null, animId = null;
+let playing = true, noteOpen = false;
+let appMode = "landing";
+let camStream = null, camVideo = null, camAnimId = null, camCaptured = false;
+
+let chalkActive = false, chalkFading = false;
+let chalkStartTime = null, chalkFadeStart = null;
+const CHALK_DURATION = 2200, CHALK_FADE = 1200, CHALK_FADE_START_AT = 0.72;
+let chalkOrder = null, chalkTarget = null;
+
+// ── RECORDING STATE ───────────────────────────────────────────────────────────
+let isRecording = false, mediaRecorder = null, recordedChunks = [];
+
+const sample = document.createElement("canvas");
+const sctx   = sample.getContext("2d", { willReadFrequently: true });
+sample.width = 240; sample.height = Math.round(240 * (614 / 977));
+
+const PAL = [
+  [188,38,38],[205,92,28],[208,170,32],[42,128,62],
+  [32,82,172],[78,50,148],[165,208,225],[218,178,145],
+  [232,226,212],[18,16,22],[62,148,115],[202,82,118],
+  [140,188,82],[85,58,40],[210,155,60],
+];
+
+// ── AUDIO ─────────────────────────────────────────────────────────────────────
+function makeClick() {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const sr = ac.sampleRate, len = sr * 0.09;
+  const buf = ac.createBuffer(1, len, sr); const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    d[i] = Math.sin(2*Math.PI*980*t) *Math.exp(-t*280)*0.50
+          +Math.sin(2*Math.PI*1900*t)*Math.exp(-t*520)*0.32
+          +Math.sin(2*Math.PI*480*t) *Math.exp(-t*500)*0.18
+          +(Math.random()*2-1)       *Math.exp(-t*1800)*0.20;
+  }
+  const src=ac.createBufferSource(); src.buffer=buf;
+  const mid=ac.createBiquadFilter(); mid.type='peaking'; mid.frequency.value=1200; mid.Q.value=1.0; mid.gain.value=5;
+  const hpf=ac.createBiquadFilter(); hpf.type='highpass'; hpf.frequency.value=320; hpf.Q.value=0.6;
+  const lpf=ac.createBiquadFilter(); lpf.type='lowpass';  lpf.frequency.value=7500; lpf.Q.value=0.5;
+  const comp=ac.createDynamicsCompressor(); comp.threshold.value=-12; comp.knee.value=6; comp.ratio.value=4; comp.attack.value=0.001; comp.release.value=0.06;
+  const gain=ac.createGain(); gain.gain.value=0.65;
+  src.connect(hpf); hpf.connect(mid); mid.connect(lpf); lpf.connect(comp); comp.connect(gain); gain.connect(ac.destination);
+  src.start(); src.stop(ac.currentTime+0.09); src.onended=()=>ac.close();
+}
+
+function makeShutter() {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const sr = ac.sampleRate, len = sr * 0.12;
+  const buf = ac.createBuffer(1, len, sr); const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    const t = i / sr;
+    d[i] = Math.sin(2*Math.PI*1400*t)*Math.exp(-t*400)*0.55
+          +Math.sin(2*Math.PI*2800*t)*Math.exp(-t*800)*0.30
+          +Math.sin(2*Math.PI*320*t) *Math.exp(-t*600)*0.22
+          +(Math.random()*2-1)       *Math.exp(-t*1200)*0.18;
+  }
+  const src=ac.createBufferSource(); src.buffer=buf;
+  const comp=ac.createDynamicsCompressor(); comp.threshold.value=-10; comp.ratio.value=5; comp.attack.value=0.001; comp.release.value=0.05;
+  const gain=ac.createGain(); gain.gain.value=0.75;
+  src.connect(comp); comp.connect(gain); gain.connect(ac.destination);
+  src.start(); src.stop(ac.currentTime+0.12); src.onended=()=>ac.close();
+}
+
+function makeSoftIris() {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  [[540, 0, 0.28], [860, 0.09, 0.32]].forEach(([freq, delay, vol]) => {
+    const osc = ac.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, ac.currentTime + delay);
+    g.gain.linearRampToValueAtTime(vol, ac.currentTime + delay + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + 0.22);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(ac.currentTime + delay);
+    osc.stop(ac.currentTime + delay + 0.24);
+    osc.onended = () => ac.close();
+  });
+}
+
+// ── PALETTE ───────────────────────────────────────────────────────────────────
+function nearestPal(r,g,b) {
+  let best=PAL[0], bestD=Infinity;
+  for (const p of PAL) { const d=(r-p[0])**2+(g-p[1])**2+(b-p[2])**2; if(d<bestD){bestD=d;best=p;} }
+  return best;
+}
+
+// ── GRAIN + RESIZE ────────────────────────────────────────────────────────────
+function buildGrain() {
+  const W=canvas.width, H=canvas.height;
+  grainCanvas=document.createElement("canvas"); grainCanvas.width=W; grainCanvas.height=H;
+  const gctx=grainCanvas.getContext("2d");
+  gctx.fillStyle="#d8d2c6"; gctx.fillRect(0,0,W,H);
+  const count=W*H*0.45|0, imgData=gctx.createImageData(W,H), dd=imgData.data;
+  for (let i=0;i<count;i++) {
+    const x=(Math.random()*W)|0, y=(Math.random()*H)|0, idx=(y*W+x)*4;
+    const light=Math.random()>0.5, a=(8+Math.random()*30)|0;
+    dd[idx]=dd[idx+1]=dd[idx+2]=light?255:0; dd[idx+3]=a;
+  }
+  gctx.putImageData(imgData,0,0);
+}
+
+function resize() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  sample.width = 240;
+  sample.height = Math.round(240 * canvas.height / canvas.width);
+  buildGrain();
+}
+function syncHeight() { canvas.width=canvas.offsetWidth; canvas.height=canvas.offsetHeight; buildGrain(); }
+
+// ── SCREEN MANAGEMENT ─────────────────────────────────────────────────────────
+function showLanding() {
+  appMode="landing";
+  bottomPanel.classList.add("no-transition");
+  bottomPanel.classList.remove("visible");
+  bottomPanel.style.maxHeight="0";
+  bottomPanel.getBoundingClientRect();
+  bottomPanel.classList.remove("no-transition");
+  noteOpen=false; noteArea.classList.remove("open"); noteInput.value=""; setNoteLabel(false);
+  vidControls.style.display="none";
+  retakeBtn.classList.remove("visible");
+  camUI.classList.remove("visible");
+  frame.classList.remove("cam-mode","cam-captured");
+  backBtn.classList.remove("visible");
+  stopCamera();
+  if (animId)   { cancelAnimationFrame(animId);   animId=null; }
+  if (camAnimId){ cancelAnimationFrame(camAnimId); camAnimId=null; }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (source&&sourceType==="video") { source.pause(); source.src=""; source.remove(); }
+  source=null; sourceType=null; sourceFile=null; camCaptured=false;
+  landing.classList.remove("hidden");
+  animateFrameIn();
+}
+
+function animateFrameIn() {
+  frame.style.animation="none"; frame.getBoundingClientRect();
+  frame.style.animation="frame-in 0.95s cubic-bezier(0.16, 1, 0.3, 1) both";
+}
+
+function showPhotoFrame(filename) {
+  appMode="photo";
+  landing.classList.add("hidden");
+  camUI.classList.remove("visible");
+  frame.classList.remove("cam-mode","cam-captured");
+  backBtn.classList.add("visible");
+  changeBtn.style.display="";
+  retakeBtn.classList.remove("visible");
+  fnameInput.value=filename||"";
+  bottomPanel.classList.add("no-transition","visible");
+  bottomPanel.style.maxHeight="56px";
+  bottomPanel.getBoundingClientRect();
+  bottomPanel.classList.remove("no-transition");
+  animateFrameIn();
+}
+
+function showCameraFrame() {
+  appMode="camera";
+  landing.classList.add("hidden");
+  camUI.classList.add("visible");
+  frame.classList.add("cam-mode");
+  frame.classList.remove("cam-captured");
+  backBtn.classList.add("visible");
+  changeBtn.style.display="none";
+  retakeBtn.classList.remove("visible");
+  fnameInput.value="";
+  bottomPanel.classList.remove("visible");
+  bottomPanel.style.maxHeight="0";
+  animateFrameIn();
+}
+
+function revealCameraPanel() {
+  frame.classList.remove("cam-mode");
+  frame.classList.add("cam-captured");
+  const now=new Date();
+  fnameInput.value=`memory-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  changeBtn.style.display="none";
+  retakeBtn.classList.add("visible");
+  bottomPanel.classList.add("no-transition","visible");
+  bottomPanel.style.maxHeight="56px";
+  bottomPanel.getBoundingClientRect();
+  bottomPanel.classList.remove("no-transition");
+}
+
+backBtn.addEventListener("click",()=>{ makeClick(); showLanding(); });
+
+// ── FILTER RENDER ─────────────────────────────────────────────────────────────
+function applyFilter(src, mirror) {
+  const W=canvas.width, H=canvas.height;
+  if (mirror) { sctx.save(); sctx.scale(-1,1); sctx.drawImage(src,-sample.width,0,sample.width,sample.height); sctx.restore(); }
+  else sctx.drawImage(src,0,0,sample.width,sample.height);
+  sctx.filter="blur(3px) saturate(1.2) contrast(1.05)"; sctx.drawImage(sample,0,0); sctx.filter="none";
+  const raw=sctx.getImageData(0,0,sample.width,sample.height), rd=raw.data;
+  for (let i=0;i<rd.length;i+=4) {
+    const [pr,pg,pb]=nearestPal(rd[i],rd[i+1],rd[i+2]), t=0.45+Math.random()*0.35;
+    rd[i]=rd[i]*(1-t)+pr*t; rd[i+1]=rd[i+1]*(1-t)+pg*t; rd[i+2]=rd[i+2]*(1-t)+pb*t;
+  }
+  sctx.putImageData(raw,0,0);
+  const bl=document.createElement("canvas"), bc=bl.getContext("2d");
+  bl.width=W; bl.height=H;
+  bc.filter="blur(20px)"; bc.drawImage(sample,0,0,W,H);
+  bc.globalAlpha=0.75; bc.filter="blur(14px)"; bc.drawImage(sample,0,0,W,H);
+  bc.globalAlpha=0.55; bc.filter="blur(6px)";  bc.drawImage(sample,0,0,W,H);
+  bc.globalAlpha=1; bc.filter="none";
+  ctx.clearRect(0,0,W,H); ctx.drawImage(bl,0,0);
+  if (grainCanvas) {
+    ctx.globalCompositeOperation="overlay";     ctx.globalAlpha=0.65; ctx.drawImage(grainCanvas,0,0);
+    ctx.globalCompositeOperation="soft-light";  ctx.globalAlpha=0.35; ctx.drawImage(grainCanvas,0,0);
+    ctx.globalCompositeOperation="source-over"; ctx.globalAlpha=1;
+  }
+  ctx.fillStyle="rgba(216,210,198,0.05)"; ctx.fillRect(0,0,W,H);
+}
+
+function renderFrame() { applyFilter(source, false); }
+
+// ── CHALK ─────────────────────────────────────────────────────────────────────
+function buildChalkOrder(W,H) {
+  const total=W*H; chalkOrder=new Int32Array(total);
+  for (let i=0;i<total;i++) chalkOrder[i]=i;
+  for (let i=total-1;i>0;i--) { const j=(Math.random()*(i+1))|0, tmp=chalkOrder[i]; chalkOrder[i]=chalkOrder[j]; chalkOrder[j]=tmp; }
+}
+
+function startChalkTransition(src, mirror) {
+  const W=canvas.width, H=canvas.height;
+  buildChalkOrder(W,H);
+  chalkTarget=document.createElement("canvas"); chalkTarget.width=W; chalkTarget.height=H;
+  const tc=chalkTarget.getContext("2d");
+  if (mirror) { sctx.save(); sctx.scale(-1,1); sctx.drawImage(src,-sample.width,0,sample.width,sample.height); sctx.restore(); }
+  else sctx.drawImage(src,0,0,sample.width,sample.height);
+  sctx.filter="blur(3px) saturate(1.2) contrast(1.05)"; sctx.drawImage(sample,0,0); sctx.filter="none";
+  const raw=sctx.getImageData(0,0,sample.width,sample.height), rd=raw.data;
+  for (let i=0;i<rd.length;i+=4) {
+    const [pr,pg,pb]=nearestPal(rd[i],rd[i+1],rd[i+2]), t=0.45+Math.random()*0.35;
+    rd[i]=rd[i]*(1-t)+pr*t; rd[i+1]=rd[i+1]*(1-t)+pg*t; rd[i+2]=rd[i+2]*(1-t)+pb*t;
+  }
+  sctx.putImageData(raw,0,0);
+  const bl=document.createElement("canvas"), bc=bl.getContext("2d");
+  bl.width=W; bl.height=H;
+  bc.filter="blur(26px)"; bc.drawImage(sample,0,0,W,H);
+  bc.globalAlpha=0.75; bc.filter="blur(14px)"; bc.drawImage(sample,0,0,W,H);
+  bc.globalAlpha=0.55; bc.filter="blur(6px)";  bc.drawImage(sample,0,0,W,H);
+  bc.globalAlpha=1; bc.filter="none";
+  tc.drawImage(bl,0,0);
+  if (grainCanvas) {
+    tc.globalCompositeOperation="overlay";     tc.globalAlpha=0.65; tc.drawImage(grainCanvas,0,0);
+    tc.globalCompositeOperation="soft-light";  tc.globalAlpha=0.35; tc.drawImage(grainCanvas,0,0);
+    tc.globalCompositeOperation="source-over"; tc.globalAlpha=1;
+  }
+  tc.fillStyle="rgba(216,210,198,0.05)"; tc.fillRect(0,0,W,H);
+  chalkActive=true; chalkFading=false; chalkStartTime=null; chalkFadeStart=null;
+}
+
+function renderChalk(timestamp) {
+  if (!chalkStartTime) chalkStartTime=timestamp;
+  const elapsed=timestamp-chalkStartTime, W=canvas.width, H=canvas.height, total=W*H;
+  if (chalkFading) {
+    const fadeT=Math.min((timestamp-chalkFadeStart)/CHALK_FADE,1);
+    const fe=1-Math.pow(1-fadeT,2);
+    renderFrame();
+    const a=1-fe;
+    if (a>0.002) { ctx.globalAlpha=a; ctx.drawImage(chalkTarget,0,0); ctx.globalAlpha=1; }
+    if (fadeT>=1) { chalkActive=false; chalkFading=false; chalkOrder=null; chalkTarget=null; }
+    return;
+  }
+  const t=Math.min(elapsed/CHALK_DURATION,1);
+  const eased=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  ctx.fillStyle="#0e0b07"; ctx.fillRect(0,0,W,H);
+  const td=chalkTarget.getContext("2d").getImageData(0,0,W,H).data;
+  const revealed=Math.floor(eased*total);
+  const out=ctx.createImageData(W,H), od=out.data;
+  for (let i=0;i<od.length;i+=4) { od[i]=14; od[i+1]=11; od[i+2]=7; od[i+3]=255; }
+  for (let n=0;n<revealed;n++) {
+    const idx=chalkOrder[n], px=idx*4;
+    od[px]=td[px]; od[px+1]=td[px+1]; od[px+2]=td[px+2]; od[px+3]=td[px+3];
+    if (Math.random()<0.3) {
+      const ox=((Math.random()*5-2)|0), oy=((Math.random()*5-2)|0);
+      const x=idx%W, y=(idx/W)|0, nx=x+ox, ny=y+oy;
+      if (nx>=0&&nx<W&&ny>=0&&ny<H) {
+        const nidx=(ny*W+nx)*4;
+        od[nidx]=td[px]; od[nidx+1]=td[px+1]; od[nidx+2]=td[px+2];
+        od[nidx+3]=Math.floor(td[px+3]*(0.2+Math.random()*0.35));
+      }
+    }
+  }
+  ctx.putImageData(out,0,0);
+  if (eased>=CHALK_FADE_START_AT&&!chalkFading) {
+    chalkFading=true; chalkFadeStart=timestamp;
+    const snap=document.createElement("canvas"); snap.width=W; snap.height=H;
+    snap.getContext("2d").putImageData(out,0,0); chalkTarget=snap;
+  }
+}
+
+// ── LOOPS ─────────────────────────────────────────────────────────────────────
+function loop(timestamp) {
+  if (chalkActive) renderChalk(timestamp);
+  else if (sourceType==="video") { if (!source.paused&&!source.ended) renderFrame(); }
+  else if (sourceType==="image") renderFrame();
+  animId=requestAnimationFrame(loop);
+}
+
+function camLoop() {
+  if (!camCaptured&&camVideo&&camVideo.videoWidth&&camVideo.readyState>=2)
+    applyFilter(camVideo, true);
+  camAnimId=requestAnimationFrame(camLoop);
+}
+
+// ── FILE LOAD ─────────────────────────────────────────────────────────────────
+function loadFile(file) {
+  sourceFile = file;
+  if (animId) { cancelAnimationFrame(animId); animId=null; }
+  if (source&&sourceType==="video") { source.pause(); source.src=""; source.remove(); }
+  source=null; sourceType=null;
+  showPhotoFrame(file.name.replace(/\.[^.]+$/,""));
+  if (file.type.startsWith("video/")) {
+    sourceType="video";
+    const vid=document.createElement("video");
+    vid.autoplay=true; vid.loop=true; vid.muted=true; vid.playsInline=true;
+    vid.style.display="none"; document.body.appendChild(vid);
+    vid.src=URL.createObjectURL(file); vid.play();
+    source=vid;
+    vidControls.style.display="flex";
+    playIcon.innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    playing=true;
+    vid.addEventListener("canplay",()=>{ startChalkTransition(source,false); loop(); },{once:true});
+  } else if (file.type.startsWith("image/")) {
+    sourceType="image"; vidControls.style.display="none";
+    const img=new Image();
+    img.onload=()=>{ source=img; startChalkTransition(source,false); loop(); };
+    img.src=URL.createObjectURL(file);
+  }
+}
+
+// ── CAMERA ────────────────────────────────────────────────────────────────────
+function stopCamera() {
+  if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  if (camVideo)  { camVideo.srcObject=null; camVideo.remove(); camVideo=null; }
+  if (camAnimId) { cancelAnimationFrame(camAnimId); camAnimId=null; }
+  camCaptured=false;
+}
+
+function startCamStream() {
+  if (!camVideo) {
+    camVideo=document.createElement("video");
+    camVideo.autoplay=true; camVideo.playsInline=true; camVideo.muted=true;
+    camVideo.style.display="none"; document.body.appendChild(camVideo);
+  }
+  if (camStream && camStream.getVideoTracks().some(t=>t.readyState==="live")) {
+    camVideo.srcObject=camStream;
+    camVideo.play().catch(()=>{});
+    camAnimId=requestAnimationFrame(camLoop);
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
+    .then(stream=>{
+      camStream=stream; camVideo.srcObject=stream;
+      camVideo.play().catch(()=>{});
+      camAnimId=requestAnimationFrame(camLoop);
+    })
+    .catch(err=>{
+      ctx.fillStyle="#0e0b07"; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.font="15px SimHei,sans-serif"; ctx.fillStyle="rgba(200,170,90,0.5)";
+      ctx.textAlign="center";
+      ctx.fillText("Camera access denied: "+err.message, canvas.width/2, canvas.height/2);
+    });
+}
+
+captureBtn.addEventListener("click",()=>{
+  makeClick();
+  showCameraFrame();
+  camCaptured=false;
+  startCamStream();
+});
+
+shutterBtn.addEventListener("click",()=>{
+  if (camCaptured) return;
+  makeShutter();
+  const flash=document.createElement("div");
+  flash.style.cssText="position:fixed;inset:0;background:rgba(255,240,180,0.5);pointer-events:none;z-index:9998;";
+  document.body.appendChild(flash);
+  let o=0.5; const fi=setInterval(()=>{ o-=0.05; flash.style.opacity=o; if(o<=0){clearInterval(fi);flash.remove();}},16);
+  const dataUrl=canvas.toDataURL("image/png");
+  const img=new Image();
+  img.onload=()=>{
+    if (camAnimId) { cancelAnimationFrame(camAnimId); camAnimId=null; }
+    camCaptured=true;
+    if (camStream) camStream.getVideoTracks().forEach(t=>{ t.enabled=false; });
+    source=img; sourceType="image";
+    startChalkTransition(source,false);
+    loop();
+    revealCameraPanel();
+  };
+  img.src=dataUrl;
+});
+
+retakeBtn.addEventListener("click",()=>{
+  makeClick();
+  if (animId) { cancelAnimationFrame(animId); animId=null; }
+  source=null; sourceType=null; camCaptured=false;
+  bottomPanel.classList.add("no-transition");
+  bottomPanel.classList.remove("visible"); bottomPanel.style.maxHeight="0";
+  bottomPanel.getBoundingClientRect();
+  bottomPanel.classList.remove("no-transition");
+  noteOpen=false; noteArea.classList.remove("open"); noteInput.value=""; setNoteLabel(false);
+  retakeBtn.classList.remove("visible");
+  frame.classList.remove("cam-captured");
+  frame.classList.add("cam-mode");
+  if (camStream) camStream.getVideoTracks().forEach(t=>{ t.enabled=true; });
+  startCamStream();
+});
+
+// ── NOTE ──────────────────────────────────────────────────────────────────────
+const PENCIL=`<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>`;
+const CLOSE=`<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>`;
+const svgWrap=s=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;opacity:0.6;flex-shrink:0">${s}</svg>`;
+
+function setNoteLabel(open) {
+  noteToggle.innerHTML=svgWrap(open?CLOSE:PENCIL)+(open?" Remove note":" Add note");
+}
+
+noteToggle.addEventListener("click",()=>{
+  makeClick(); noteOpen=!noteOpen;
+  noteArea.classList.toggle("open",noteOpen);
+  bottomPanel.style.maxHeight=noteOpen?"160px":"56px";
+  syncHeight(); setNoteLabel(noteOpen);
+});
+
+// ── RECORD FILTERED VIDEO ─────────────────────────────────────────────────────
+function recordFilteredVideo(fname) {
+  if (isRecording) return;
+  if (!source || sourceType !== "video") return;
+
+  const mimeType = MediaRecorder.isTypeSupported("video/mp4")
+    ? "video/mp4"
+    : "video/webm";
+  const ext = mimeType === "video/mp4" ? "mp4" : "webm";
+
+  // ── build the same framed composite the PNG export uses ──────────────────
+  const noteText  = noteInput.value.trim();
+  const hasNote   = noteOpen && noteText.length > 0;
+  const PAD = 26, FRAME_PAD = 32;
+  const FONT_TITLE = '500 14px "SimHei", sans-serif';
+  const FONT_NOTE  = '400 12px "SimHei", sans-serif';
+
+  let noteLines = [];
+  if (hasNote) {
+    const tmp = document.createElement("canvas").getContext("2d");
+    tmp.font = FONT_NOTE;
+    const maxW = canvas.width + FRAME_PAD * 2 - PAD * 2;
+    const words = noteText.split(" "); let line = "";
+    for (const w of words) {
+      const test = line ? line + " " + w : w;
+      if (tmp.measureText(test).width > maxW && line) { noteLines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) noteLines.push(line);
+  }
+
+  const TITLE_H = 58, LINE_H = 17, NOTE_PADDING = hasNote ? 10 : 0;
+  const BAR_H   = TITLE_H + (hasNote ? noteLines.length * LINE_H + NOTE_PADDING : 0);
+  const cw = canvas.width, ch = canvas.height;
+  const outW = cw + FRAME_PAD * 2;
+  const outH = ch + FRAME_PAD + BAR_H;
+
+  // offscreen canvas that MediaRecorder will capture
+  const offscreen = document.createElement("canvas");
+  offscreen.width  = outW;
+  offscreen.height = outH;
+  const oc = offscreen.getContext("2d");
+
+  // draw static frame chrome (background, rounded clip, bar) — reused each frame
+  function drawFrameChrome() {
+    // fully clear every frame so no previous clip/state bleeds through
+    oc.clearRect(0, 0, outW, outH);
+    oc.fillStyle = "#0e0b07";
+    oc.fillRect(0, 0, outW, outH);
+
+    // ── outer rounded rect background ──
+    const rx = 18;
+    oc.save();
+    oc.beginPath();
+    oc.moveTo(rx, 0); oc.lineTo(outW - rx, 0); oc.quadraticCurveTo(outW, 0, outW, rx);
+    oc.lineTo(outW, outH - rx); oc.quadraticCurveTo(outW, outH, outW - rx, outH);
+    oc.lineTo(rx, outH); oc.quadraticCurveTo(0, outH, 0, outH - rx);
+    oc.lineTo(0, rx); oc.quadraticCurveTo(0, 0, rx, 0);
+    oc.closePath();
+    oc.clip();
+    oc.fillStyle = "#0e0b07";
+    oc.fillRect(0, 0, outW, outH);
+    oc.restore(); // restore outer clip before drawing anything else
+
+    // ── inner image area (separate save/restore) ──
+    const ir = 8, ix = FRAME_PAD, iy = FRAME_PAD, iw = cw, ih = ch;
+    oc.save();
+    oc.beginPath();
+    oc.moveTo(ix + ir, iy); oc.lineTo(ix + iw - ir, iy); oc.quadraticCurveTo(ix + iw, iy, ix + iw, iy + ir);
+    oc.lineTo(ix + iw, iy + ih - ir); oc.quadraticCurveTo(ix + iw, iy + ih, ix + iw - ir, iy + ih);
+    oc.lineTo(ix + ir, iy + ih); oc.quadraticCurveTo(ix, iy + ih, ix, iy + ih - ir);
+    oc.lineTo(ix, iy + ir); oc.quadraticCurveTo(ix, iy, ix + ir, iy);
+    oc.closePath();
+    oc.clip();
+    oc.drawImage(canvas, ix, iy, iw, ih);
+    oc.restore(); // restore inner clip
+
+    // ── bottom bar + text (no clip needed) ──
+    const barY = iy + ih;
+    oc.fillStyle = "#0e0b07";
+    oc.fillRect(0, barY, outW, BAR_H);
+    oc.font = FONT_TITLE;
+    oc.fillStyle = "rgba(220,190,100,0.82)";
+    oc.fillText(fname, PAD, barY + 37);
+    if (hasNote) {
+      oc.font = FONT_NOTE;
+      oc.fillStyle = "rgba(180,150,70,0.58)";
+      let ly = barY + TITLE_H + 2;
+      for (const l of noteLines) { oc.fillText(l, PAD, ly); ly += LINE_H; }
+    }
+  }
+
+  // rAF loop that composites into the offscreen canvas while recording
+  let compAnimId = null;
+  function compLoop() {
+    drawFrameChrome();
+    compAnimId = requestAnimationFrame(compLoop);
+  }
+
+  recordedChunks = [];
+  isRecording = true;
+
+  const origHTML = downloadBtn.innerHTML;
+  downloadBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;opacity:0.8;flex-shrink:0"><circle cx="12" cy="12" r="6" fill="rgba(220,80,60,0.9)"/></svg> Recording…`;
+  downloadBtn.style.pointerEvents = "none";
+
+  const stream = offscreen.captureStream(30);
+  mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+
+  mediaRecorder.ondataavailable = e => {
+    if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    cancelAnimationFrame(compAnimId);
+    isRecording = false;
+    downloadBtn.style.pointerEvents = "";
+    const blob = new Blob(recordedChunks, { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = fname + "." + ext; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    source.loop = true;
+    source.play();
+    downloadBtn.classList.add("flash");
+    downloadBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;opacity:0.8;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg> Saved`;
+    setTimeout(() => { downloadBtn.classList.remove("flash"); downloadBtn.innerHTML = origHTML; }, 2200);
+  };
+
+  source.loop = false;
+  source.currentTime = 0;
+  source.play();
+  compLoop(); // start compositing into offscreen
+  mediaRecorder.start();
+
+  source.addEventListener("ended", () => mediaRecorder.stop(), { once: true });
+}
+
+// ── DOWNLOAD ──────────────────────────────────────────────────────────────────
+function ejectPolaroid(dataUrl) {
+  const r=downloadBtn.getBoundingClientRect();
+  const pol=document.createElement("div"); pol.className="polaroid-fly";
+  const img=document.createElement("img"); img.src=dataUrl;
+  img.style.cssText="display:block;width:72px;height:72px;object-fit:cover;border-radius:2px;";
+  pol.appendChild(img);
+  pol.style.setProperty("--px",(Math.random()*120-60)+"px");
+  pol.style.setProperty("--py",-(80+Math.random()*60)+"px");
+  pol.style.setProperty("--pr",(Math.random()*28-14)+"deg");
+  pol.style.left=(r.left+r.width/2-41)+"px";
+  pol.style.top=(r.top+r.height/2-41)+"px";
+  document.body.appendChild(pol); pol.addEventListener("animationend",()=>pol.remove());
+}
+
+downloadBtn.addEventListener("click",()=>{
+  if (isRecording) return;
+
+  // ── VIDEO: record the filtered canvas output ──────────────────────────────
+  if (sourceType === "video") {
+    const fname = fnameInput.value.trim() || "afterlight";
+    recordFilteredVideo(fname);
+    return;
+  }
+
+  // ── IMAGE / CAMERA CAPTURE: export as PNG with optional note ─────────────
+  makeSoftIris();
+  const cw=canvas.width, ch=canvas.height, PAD=26, FRAME_PAD=32;
+  const fname=fnameInput.value.trim()||"airbrush";
+  const noteText=noteInput.value.trim(), hasNote=noteOpen&&noteText.length>0;
+  const FONT_TITLE='500 14px "SimHei", sans-serif', FONT_NOTE='400 12px "SimHei", sans-serif';
+  let noteLines=[];
+  if (hasNote) {
+    const tmp=document.createElement("canvas").getContext("2d"); tmp.font=FONT_NOTE;
+    const maxW=cw+FRAME_PAD*2-PAD*2; const words=noteText.split(" "); let line="";
+    for (const w of words) { const test=line?line+" "+w:w; if(tmp.measureText(test).width>maxW&&line){noteLines.push(line);line=w;}else line=test; }
+    if (line) noteLines.push(line);
+  }
+  const TITLE_H=58, LINE_H=17, NOTE_PADDING=hasNote?10:0;
+  const BAR_H=TITLE_H+(hasNote?noteLines.length*LINE_H+NOTE_PADDING:0);
+  const out=document.createElement("canvas");
+  out.width=cw+FRAME_PAD*2; out.height=ch+FRAME_PAD+BAR_H;
+  const oc=out.getContext("2d");
+  oc.fillStyle="#0e0b07"; oc.fillRect(0,0,out.width,out.height);
+  const rx=18; oc.save();
+  oc.beginPath(); oc.moveTo(rx,0); oc.lineTo(out.width-rx,0); oc.quadraticCurveTo(out.width,0,out.width,rx);
+  oc.lineTo(out.width,out.height-rx); oc.quadraticCurveTo(out.width,out.height,out.width-rx,out.height);
+  oc.lineTo(rx,out.height); oc.quadraticCurveTo(0,out.height,0,out.height-rx);
+  oc.lineTo(0,rx); oc.quadraticCurveTo(0,0,rx,0); oc.closePath(); oc.clip();
+  oc.fillStyle="#0e0b07"; oc.fillRect(0,0,out.width,out.height);
+  oc.save();
+  const ir=8, ix=FRAME_PAD, iy=FRAME_PAD, iw=cw, ih=ch;
+  oc.beginPath(); oc.moveTo(ix+ir,iy); oc.lineTo(ix+iw-ir,iy); oc.quadraticCurveTo(ix+iw,iy,ix+iw,iy+ir);
+  oc.lineTo(ix+iw,iy+ih-ir); oc.quadraticCurveTo(ix+iw,iy+ih,ix+iw-ir,iy+ih);
+  oc.lineTo(ix+ir,iy+ih); oc.quadraticCurveTo(ix,iy+ih,ix,iy+ih-ir);
+  oc.lineTo(ix,iy+ir); oc.quadraticCurveTo(ix,iy,ix+ir,iy); oc.closePath(); oc.clip();
+  oc.drawImage(canvas,ix,iy,iw,ih); oc.restore();
+  const barY=iy+ih;
+  oc.fillStyle="#0e0b07"; oc.fillRect(0,barY,out.width,BAR_H);
+  oc.font=FONT_TITLE; oc.fillStyle="rgba(220,190,100,0.82)"; oc.fillText(fname,PAD,barY+37);
+  if (hasNote) {
+    oc.font=FONT_NOTE; oc.fillStyle="rgba(180,150,70,0.58)";
+    let ly=barY+TITLE_H+2; for (const l of noteLines) { oc.fillText(l,PAD,ly); ly+=LINE_H; }
+  }
+  oc.restore();
+  const dataUrl=out.toDataURL("image/png");
+  const a=document.createElement("a"); a.href=dataUrl; a.download=fname+".png"; a.click();
+  ejectPolaroid(dataUrl);
+  downloadBtn.classList.add("flash");
+  const orig=downloadBtn.innerHTML;
+  downloadBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;opacity:0.8;flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg> Saved`;
+  setTimeout(()=>{ downloadBtn.classList.remove("flash"); downloadBtn.innerHTML=orig; },2200);
+});
+
+// ── OTHER CONTROLS ────────────────────────────────────────────────────────────
+browseBtn.addEventListener("click",()=>{ makeClick(); fileInput.click(); });
+fileInput.addEventListener("change",e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+
+landing.addEventListener("dragover",e=>{ e.preventDefault(); landing.classList.add("drag-over"); });
+landing.addEventListener("dragleave",()=>landing.classList.remove("drag-over"));
+landing.addEventListener("drop",e=>{ e.preventDefault(); landing.classList.remove("drag-over"); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+frame.addEventListener("dragover",e=>e.preventDefault());
+frame.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer.files[0]&&appMode==="landing") loadFile(e.dataTransfer.files[0]); });
+
+playBtn.addEventListener("click",()=>{
+  makeClick();
+  if (!source||sourceType!=="video") return;
+  if (playing) { source.pause(); playIcon.innerHTML='<polygon points="5,3 19,12 5,21"/>'; playing=false; }
+  else { source.play(); playIcon.innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'; playing=true; }
+});
+
+changeBtn.addEventListener("click",()=>{ makeClick(); fileInput.value=""; fileInput.click(); });
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener("resize",resize);
+resize();
+setNoteLabel(false);
+</script>
+</body>
+</html>
